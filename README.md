@@ -1,4 +1,6 @@
-# &lt;KIMBERLITE&gt;
+# Kimberlite Launcher
+
+`«<KIMBERLITE>»`
 
 La web de **Kimberlite**, el launcher de Minecraft de Adrián.
 
