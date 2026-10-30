@@ -18,14 +18,66 @@
     ];
 
     // ---- wordmark intro: «<>» opens into «<KIMBERLITE>» ----
+    // Letters are static in the HTML so the brand survives without JS;
+    // here we only stagger the entrance and allow a replay on click.
     var wm = document.getElementById('wm-letters');
-    'KIMBERLITE'.split('').forEach(function (ch, i) {
-        var s = document.createElement('span');
-        s.className = 'kb-letter';
-        s.style.animationDelay = (0.4 + i * 0.04) + 's';
-        s.textContent = ch;
-        wm.appendChild(s);
-    });
+    var letters = Array.prototype.slice.call(wm.querySelectorAll('.kb-letter'));
+    var brackets = Array.prototype.slice.call(document.querySelectorAll('.kb-bracket'));
+
+    function playIntro() {
+        letters.concat(brackets).forEach(function (s) {
+            s.style.animation = 'none';
+        });
+        void wm.offsetWidth; // restart animations
+        letters.forEach(function (s, i) {
+            s.style.animation = '';
+            s.style.animationDelay = (0.4 + i * 0.04) + 's';
+        });
+        brackets.forEach(function (s) {
+            s.style.animation = '';
+            s.style.animationDelay = '';
+        });
+    }
+    playIntro();
+    document.getElementById('wordmark').addEventListener('click', playIntro);
+
+    // A wink for anyone who opens the console.
+    console.log('%c«<KIMBERLITE>»', 'font-weight:bold;font-size:14px',
+        'Hecho por Adrián. Código abierto: https://github.com/4DRI4N-OFF/Kimberlite-Launcher');
+
+    // ---- seasons: same Kimberlite, different ambience ----
+    // Date-driven. Preview any season with ?season=halloween or ?season=navidad;
+    // ?season=none forces the default look.
+    var SEASONS = [
+        { id: 'halloween', from: '10-24', to: '11-01',
+          note: 'Ambiente de temporada: Halloween, del 24 de octubre al 1 de noviembre.' },
+        { id: 'navidad', from: '12-18', to: '01-06',
+          note: 'Ambiente de temporada: Navidad y Reyes, del 18 de diciembre al 6 de enero.' }
+    ];
+
+    function seasonFor(date) {
+        var mmdd = ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2);
+        for (var i = 0; i < SEASONS.length; i++) {
+            var s = SEASONS[i];
+            if (s.from <= s.to ? (mmdd >= s.from && mmdd <= s.to)
+                               : (mmdd >= s.from || mmdd <= s.to)) return s;
+        }
+        return null;
+    }
+
+    var forced = new URLSearchParams(window.location.search).get('season');
+    var active = null;
+    if (forced === 'none') active = null;
+    else if (forced) {
+        for (var k = 0; k < SEASONS.length; k++) if (SEASONS[k].id === forced) active = SEASONS[k];
+    } else active = seasonFor(new Date());
+
+    if (active) {
+        document.documentElement.setAttribute('data-season', active.id);
+        var note = document.getElementById('season-note');
+        note.textContent = active.note;
+        note.hidden = false;
+    }
 
     // ---- tabs ----
     var tabs = Array.prototype.slice.call(document.querySelectorAll('.kb-tab'));
@@ -79,7 +131,6 @@
     var playBtn = document.getElementById('play-btn');
     var playStatus = document.getElementById('play-status');
     var timers = [];
-    var step = -1;
 
     function clearTimers() {
         timers.forEach(function (t) { window.clearTimeout(t); });
@@ -88,13 +139,11 @@
 
     playBtn.addEventListener('click', function () {
         clearTimers();
-        step = 0;
         playStatus.textContent = launchScript[0];
         playBtn.textContent = 'Lanzando…';
         for (var i = 1; i < launchScript.length; i++) {
             (function (idx) {
                 timers.push(window.setTimeout(function () {
-                    step = idx;
                     playStatus.textContent = launchScript[idx];
                     if (idx === launchScript.length - 1) playBtn.textContent = 'Jugar';
                 }, 950 * idx));

@@ -68,6 +68,7 @@ button { font: inherit; cursor: pointer; }
 }
 
 .kb-wordmark {
+    cursor: pointer;
     font-weight: 700;
     font-size: 13.5px;
     letter-spacing: 0.05em;
@@ -469,7 +470,7 @@ button { font: inherit; cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) {
     .kb-reveal { opacity: 1; transform: none; transition: none; }
-    .kb-letter, .kb-bracket-l, .kb-bracket-r, .kb-plate-big .kb-plate-frame img, .kb-pane { animation: none; }
+    .kb-letter, .kb-bracket-l, .kb-bracket-r, .kb-plate-big .kb-plate-frame img, .kb-pane, .kb-stage::before { animation: none; }
     .kb-letter { opacity: 1; transform: none; }
     .kb-tab, .kb-play, .kb-newinst, .kb-switch, .kb-knob, .kb-setrow-link, .kb-setvalue, .kb-navlinks a { transition: none; }
 }
@@ -503,3 +504,48 @@ button { font: inherit; cursor: pointer; }
 
 /* hidden panes must stay hidden even with display rules */
 .kb-pane[hidden] { display: none; }
+
+/* ---- seasons: same house, different light --------------------------------
+   The season only retunes the palette and adds a faint ambient glow;
+   layout, photos and glass stay put. Driven by [data-season] on <html>. */
+
+:root[data-season="halloween"] {
+    --kb-ground: #eae2d2;
+    --kb-accent: #b0501b;
+    --kb-accent-soft: rgba(176, 80, 27, 0.12);
+}
+
+:root[data-season="navidad"] {
+    --kb-ground: #e7eae6;
+    --kb-accent: #2e5e52;
+    --kb-accent-soft: rgba(46, 94, 82, 0.12);
+}
+
+.kb-stage::before {
+    content: none;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+:root[data-season="halloween"] .kb-stage::before {
+    content: "";
+    background: radial-gradient(62% 42% at 50% 0%, rgba(176, 80, 27, 0.12), transparent 70%);
+    animation: kb-season-glow 6s ease-in-out infinite;
+}
+
+:root[data-season="navidad"] .kb-stage::before {
+    content: "";
+    background: radial-gradient(62% 42% at 50% 0%, rgba(255, 255, 255, 0.55), transparent 70%);
+}
+
+@keyframes kb-season-glow {
+    0%, 100% { opacity: 0.75; }
+    50% { opacity: 1; }
+}
+
+.kb-season-note {
+    margin: 0 0 10px;
+    color: var(--kb-ink-3);
+    font-size: 12.5px;
+}
