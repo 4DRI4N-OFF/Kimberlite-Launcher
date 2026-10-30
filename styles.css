@@ -68,6 +68,7 @@ button { font: inherit; cursor: pointer; }
 }
 
 .kb-wordmark {
+    cursor: pointer;
     font-weight: 700;
     font-size: 13.5px;
     letter-spacing: 0.05em;
