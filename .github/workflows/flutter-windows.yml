@@ -3,7 +3,8 @@ on:
   push:
     branches: [ flutter-poc ]
   workflow_dispatch:
-permissions: contents: read
+permissions:
+  contents: read
 jobs:
   build:
     runs-on: windows-latest
