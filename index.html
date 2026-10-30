@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kimberlite: el launcher de Minecraft de Adrián</title>
+<meta name="description" content="Kimberlite es el launcher de Minecraft de Adrián: una ventana de cristal estilo iOS 26 para tus instancias. Proyecto personal, sin descarga pública todavía.">
+<meta property="og:title" content="Kimberlite: el launcher de Minecraft de Adrián">
+<meta property="og:description" content="Una ventana de cristal estilo iOS 26 para tus instancias de Minecraft. Proyecto personal; de momento no hay descarga pública.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://commons.wikimedia.org/wiki/Special:FilePath/Open_pit_mine.jpg?width=1200">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23ece9e1'/%3E%3Ctext x='32' y='42' font-family='-apple-system,Segoe UI,Arial' font-size='26' font-weight='700' text-anchor='middle' fill='%230e6071'%3E%26lt;K%26gt;%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="kb-stage">
+    <nav class="kb-nav" aria-label="Secciones">
+        <span class="kb-wordmark" aria-hidden="true"><span class="kb-bracket kb-bracket-l">&lt;</span><span class="kb-wm-letters" id="wm-letters"></span><span class="kb-bracket kb-bracket-r">&gt;</span></span>
+        <div class="kb-navlinks">
+            <a href="#ventana">La ventana</a>
+            <a href="#nombre">El nombre</a>
+            <a href="#sigue">Qué sigue</a>
+        </div>
+    </nav>
+
+    <header class="kb-hero">
+        <h1 class="kb-title kb-reveal">Kimberlite: el launcher de Minecraft de Adrián</h1>
+        <p class="kb-lede kb-reveal">
+            Su seña de identidad es la ventana: cristal estilo iOS 26 y una intro en la que
+            «&lt;&gt;» se abre hasta «&lt;KIMBERLITE&gt;». La ventana de abajo es una muestra:
+            se puede tocar.
+        </p>
+    </header>
+
+    <section id="ventana" class="kb-section kb-section-window">
+        <div class="kb-reveal">
+            <div class="kb-window" id="demo-window">
+                <div class="kb-tabs" role="tablist" aria-label="Pestañas del launcher">
+                    <button role="tab" aria-selected="true" class="kb-tab is-active" data-tab="jugar">Jugar</button>
+                    <button role="tab" aria-selected="false" class="kb-tab" data-tab="instancias">Instancias</button>
+                    <button role="tab" aria-selected="false" class="kb-tab" data-tab="mods">Mods</button>
+                    <button role="tab" aria-selected="false" class="kb-tab" data-tab="ajustes">Ajustes</button>
+                </div>
+
+                <div class="kb-screen">
+                    <div class="kb-pane" role="tabpanel" aria-label="Jugar" data-pane="jugar">
+                        <div class="kb-list">
+                            <button class="kb-setrow kb-setrow-link" data-goto="instancias">
+                                <span class="kb-setlabel">Instancia</span>
+                                <span class="kb-setvalue"><span class="js-inst-name">Supervivencia</span> <span class="kb-setmeta js-inst-meta">1.21.1 · Fabric</span></span>
+                            </button>
+                            <div class="kb-setrow">
+                                <span class="kb-setlabel">Cuenta</span>
+                                <span class="kb-setvalue">Adrián <span class="kb-setmeta">Microsoft · también vale un perfil local</span></span>
+                            </div>
+                        </div>
+                        <button class="kb-play" id="play-btn">Jugar</button>
+                        <p class="kb-status" id="play-status" aria-live="polite">Nada en marcha. Pulsa Jugar para ver la secuencia.</p>
+                    </div>
+
+                    <div class="kb-pane" role="tabpanel" aria-label="Instancias" data-pane="instancias" hidden>
+                        <div class="kb-list" id="inst-list">
+                            <button class="kb-setrow kb-setrow-link is-selected" data-inst="0">
+                                <span class="kb-setlabel kb-setlabel-strong">Supervivencia</span>
+                                <span class="kb-setvalue"><span class="kb-setmeta">1.21.1 · Fabric</span><span class="kb-check" aria-label="seleccionada">✓</span></span>
+                            </button>
+                            <button class="kb-setrow kb-setrow-link" data-inst="1">
+                                <span class="kb-setlabel kb-setlabel-strong">Creativo</span>
+                                <span class="kb-setvalue"><span class="kb-setmeta">1.20.4 · Forge</span><span class="kb-check" aria-label="seleccionada" hidden>✓</span></span>
+                            </button>
+                            <button class="kb-setrow kb-setrow-link" data-inst="2">
+                                <span class="kb-setlabel kb-setlabel-strong">Pruebas con mods</span>
+                                <span class="kb-setvalue"><span class="kb-setmeta">1.21 · NeoForge</span><span class="kb-check" aria-label="seleccionada" hidden>✓</span></span>
+                            </button>
+                        </div>
+                        <button class="kb-newinst" id="newinst-btn">Nueva instancia</button>
+                        <p class="kb-status" id="newinst-hint" hidden>En el launcher real, este botón abre el asistente para crear la instancia.</p>
+                    </div>
+
+                    <div class="kb-pane kb-pane-center" role="tabpanel" aria-label="Mods" data-pane="mods" hidden>
+                        <p class="kb-empty-title">Vacía, por ahora</p>
+                        <p class="kb-empty-meta">El catálogo de mods es la siguiente fase del launcher. La pestaña ya está aquí, esperándolo.</p>
+                    </div>
+
+                    <div class="kb-pane" role="tabpanel" aria-label="Ajustes" data-pane="ajustes" hidden>
+                        <div class="kb-list">
+                            <div class="kb-setrow">
+                                <span class="kb-setlabel kb-setlabel-strong">Carpeta de instancias</span>
+                                <span class="kb-setvalue"><span class="kb-setmeta">Separada de otros launchers</span></span>
+                            </div>
+                            <div class="kb-setrow">
+                                <span class="kb-setlabel kb-setlabel-strong">Reducir animaciones</span>
+                                <button role="switch" aria-checked="false" aria-label="Reducir animaciones" class="kb-switch" id="calm-switch"><span class="kb-knob"></span></button>
+                            </div>
+                            <div class="kb-setrow">
+                                <span class="kb-setlabel kb-setlabel-strong">Registros</span>
+                                <span class="kb-setvalue"><span class="kb-setmeta">Los logs, siempre a mano</span></span>
+                            </div>
+                        </div>
+                        <p class="kb-status">El interruptor funciona: actívalo y la ventana se calma.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="kb-window-caption kb-reveal">
+            Ventana de muestra: las funciones son las que el launcher ya tiene;
+            el diseño de esta página es una propuesta, no una captura de la app.
+        </p>
+    </section>
+
+    <section id="nombre" class="kb-section">
+        <h2 class="kb-h2 kb-reveal">Por qué se llama Kimberlite</h2>
+        <div class="kb-name-grid">
+            <p class="kb-name-text kb-reveal">
+                Kimberley, Sudáfrica. Allí está el Big Hole, la mina que dio nombre
+                a la kimberlita: la roca que trae los diamantes desde más de 150 km
+                de profundidad hasta la superficie. Este launcher lleva su nombre.
+            </p>
+            <figure class="kb-plate kb-plate-big kb-reveal">
+                <span class="kb-plate-frame">
+                    <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Open_pit_mine.jpg?width=1600" alt="El Big Hole, la gran excavación de la mina de diamantes de Kimberley, Sudáfrica" loading="lazy">
+                </span>
+                <figcaption>El Big Hole de Kimberley, la mina que da nombre a la roca</figcaption>
+            </figure>
+        </div>
+        <div class="kb-plates">
+            <figure class="kb-plate kb-reveal">
+                <span class="kb-plate-frame kb-plate-43">
+                    <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Kimberlite_from_the_Jurassic_of_Pennsylvania.jpg?width=1200" alt="Una kimberlita en bruto, gris verdosa y densa" loading="lazy">
+                </span>
+                <figcaption>Kimberlita en bruto: discreta por fuera</figcaption>
+            </figure>
+            <figure class="kb-plate kb-reveal">
+                <span class="kb-plate-frame kb-plate-43">
+                    <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Kimberlit_%C3%9Cbersicht_2_LPL.jpg?width=1200" alt="Kimberlita vista al microscopio, con cristales de olivino redondeados dentro de la matriz" loading="lazy">
+                </span>
+                <figcaption>Kimberlita al microscopio: olivino dentro de la matriz</figcaption>
+            </figure>
+            <figure class="kb-plate kb-reveal">
+                <span class="kb-plate-frame kb-plate-43">
+                    <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Rough_diamond_-_hardest_known_mineral.jpg?width=1200" alt="Un diamante en bruto, todavía sin tallar" loading="lazy">
+                </span>
+                <figcaption>Un diamante en bruto, todavía sin tallar</figcaption>
+            </figure>
+        </div>
+    </section>
+
+    <section id="sigue" class="kb-section">
+        <h2 class="kb-h2 kb-reveal">La siguiente veta</h2>
+        <div class="kb-reveal">
+            <p class="kb-next-title">Catálogo de mods</p>
+            <p class="kb-next-body">
+                Buscar, instalar y actualizar mods sin salir de la ventana. Es la próxima
+                fase del launcher y todavía no existe: cuando llegue, vivirá en la pestaña Mods.
+            </p>
+            <p class="kb-next-body">
+                De momento tampoco hay descarga pública: Kimberlite se está construyendo.
+                Cuando haya algo que probar, aparecerá en esta página.
+            </p>
+        </div>
+    </section>
+
+    <footer class="kb-foot kb-reveal">
+        <p>Kimberlite es un proyecto personal de Adrián. Esta página no vende nada ni recoge datos.</p>
+        <p class="kb-credits">
+            Fotos reales, de Wikimedia Commons: <a href="https://commons.wikimedia.org/wiki/File:Kimberlite_from_the_Jurassic_of_Pennsylvania.jpg">kimberlita, James St. John (CC BY 2.0)</a> · <a href="https://commons.wikimedia.org/wiki/File:Kimberlit_%C3%9Cbersicht_2_LPL.jpg">kimberlita al microscopio, Ringwoodit (CC BY-SA 4.0)</a> · <a href="https://commons.wikimedia.org/wiki/File:Open_pit_mine.jpg">Big Hole de Kimberley, Irene2005 (CC BY 2.0)</a> · <a href="https://commons.wikimedia.org/wiki/File:Rough_diamond_-_hardest_known_mineral.jpg">diamante en bruto, dominio público</a>.
+        </p>
+    </footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
