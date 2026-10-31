@@ -1,0 +1,27 @@
+name: flutter-windows-poc
+on:
+  push:
+    branches: [ flutter-poc ]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Windows runner
+        run: flutter create --platforms windows flutter_poc
+      - name: Build release
+        working-directory: flutter_poc
+        run: |
+          flutter pub get
+          flutter build windows --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kimberlite-flutter-windows
+          path: flutter_poc/build/windows/x64/runner/Release/
