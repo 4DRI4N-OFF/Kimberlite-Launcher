@@ -39,6 +39,25 @@ class _KimberliteStageState extends State<KimberliteStage>
   late final AnimationController drift;
   bool introDone = false;
   bool calm = false;
+  // modo oscuro por defecto (pedido por Adrián): cantera de noche, tinta de piedra clara
+  bool dark = true;
+  Color get ink => dark ? const Color(0xFFEDE9E0) : const Color(0xFF201D18);
+  Color get teal => const Color(0xFF0E6071);
+  Color get tealSoft => dark ? const Color(0xFF4FA8BD) : const Color(0xFF0E6071);
+  Color get glassFill => dark ? Colors.white.withValues(alpha: 0.07) : Colors.white.withValues(alpha: 0.55);
+  Color get glassBorder => dark ? Colors.white.withValues(alpha: 0.16) : Colors.white.withValues(alpha: 0.7);
+  Color get pillFill => dark ? Colors.white.withValues(alpha: 0.16) : Colors.white.withValues(alpha: 0.85);
+  Color get hoverFill => dark ? Colors.white.withValues(alpha: 0.10) : Colors.white.withValues(alpha: 0.5);
+  List<Color> get bgColors =>
+      dark ? const [Color(0xFF171410), Color(0xFF201C16)] : const [Color(0xFFEDE9E0), Color(0xFFE4DFD3)];
+  List<Color> get blobColors => dark
+      ? const [Color(0x30C7B49A), Color(0x2A5F97A0), Color(0x24A89A80)]
+      : const [Color(0x55D8CDB8), Color(0x4DC7DFE2), Color(0x40E3DCC9)];
+  // interfaz viva: parpadeo del puntero y revelado en cascada de cada panel
+  final ValueNotifier<Offset> pointer = ValueNotifier(Offset.zero);
+  late final AnimationController paneCtrl =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 520));
+  bool pressing = false;
   int tab = 0;
   int selectedInstance = 0;
   bool showNewHint = false;
@@ -69,6 +88,11 @@ class _KimberliteStageState extends State<KimberliteStage>
         if (mounted) setState(() => introDone = true);
       });
     }
+    if (calm) {
+      paneCtrl.value = 1;
+    } else {
+      paneCtrl.forward();
+    }
     SchedulerBinding.instance.addTimingsCallback(_onFrame);
   }
 
@@ -87,6 +111,8 @@ class _KimberliteStageState extends State<KimberliteStage>
   void dispose() {
     intro.dispose();
     drift.dispose();
+    paneCtrl.dispose();
+    pointer.dispose();
     fps.dispose();
     _cancelTimers();
     SchedulerBinding.instance.removeTimingsCallback(_onFrame);
@@ -145,15 +171,22 @@ class _KimberliteStageState extends State<KimberliteStage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
+      body: MouseRegion(
+        onHover: (e) {
+          if (calm) return;
+          final s = MediaQuery.of(context).size;
+          pointer.value =
+              Offset((e.localPosition.dx / s.width) * 2 - 1, (e.localPosition.dy / s.height) * 2 - 1);
+        },
+        child: Stack(
         fit: StackFit.expand,
         children: [
-          const DecoratedBox(
+          DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFFEDE9E0), Color(0xFFE4DFD3)],
+                colors: bgColors,
               ),
             ),
           ),
@@ -170,7 +203,12 @@ class _KimberliteStageState extends State<KimberliteStage>
               constraints: const BoxConstraints(maxWidth: 660),
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: _window(),
+                child: ValueListenableBuilder<Offset>(
+                  valueListenable: pointer,
+                  builder: (context, pt, child) => Transform.translate(
+                      offset: calm ? Offset.zero : Offset(pt.dx * 7, pt.dy * 5), child: child),
+                  child: _window(),
+                ),
               ),
             ),
           ),
@@ -178,14 +216,16 @@ class _KimberliteStageState extends State<KimberliteStage>
           if (!introDone) _introOverlay(),
         ],
       ),
+      ),
     );
   }
 
   List<Widget> _blobs() {
     final t = drift.value;
+    final pt = pointer.value;
     Offset p(double phase) => Offset(
-        0.5 + 0.32 * math.sin(2 * math.pi * (t + phase)),
-        0.5 + 0.30 * math.cos(2 * math.pi * (t * 0.8 + phase)));
+        0.5 + 0.32 * math.sin(2 * math.pi * (t + phase)) + pt.dx * 0.07,
+        0.5 + 0.30 * math.cos(2 * math.pi * (t * 0.8 + phase)) + pt.dy * 0.055);
     final a = p(0.0), b = p(0.33), c = p(0.66);
     Widget blob(Offset at, Color color, double size) => Align(
           alignment: Alignment(at.dx * 2 - 1, at.dy * 2 - 1),
@@ -199,9 +239,9 @@ class _KimberliteStageState extends State<KimberliteStage>
           ),
         );
     return [
-      blob(a, const Color(0x55D8CDB8), 380),
-      blob(b, const Color(0x4DC7DFE2), 420),
-      blob(c, const Color(0x40E3DCC9), 340),
+      blob(a, blobColors[0], 380),
+      blob(b, blobColors[1], 420),
+      blob(c, blobColors[2], 340),
     ];
   }
 
@@ -213,9 +253,9 @@ class _KimberliteStageState extends State<KimberliteStage>
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.55),
+            color: glassFill,
             borderRadius: BorderRadius.circular(radius),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+            border: Border.all(color: glassBorder),
           ),
           child: child,
         ),
@@ -226,7 +266,7 @@ class _KimberliteStageState extends State<KimberliteStage>
   Widget _wordmark({double size = 15, bool tappable = true}) {
     final w = Text('<KIMBERLITE>',
         style: TextStyle(
-            color: const Color(0xFF201D18),
+            color: ink,
             fontSize: size,
             fontWeight: FontWeight.w700,
             letterSpacing: size * 0.32));
@@ -254,7 +294,7 @@ class _KimberliteStageState extends State<KimberliteStage>
                 _wordmark(),
                 const Spacer(),
                 Text('Launcher',
-                    style: TextStyle(color: const Color(0xFF201D18).withValues(alpha: 0.55), fontSize: 13)),
+                    style: TextStyle(color: ink.withValues(alpha: 0.55), fontSize: 13)),
               ]),
               const SizedBox(height: 16),
               _tabBar(),
@@ -282,35 +322,71 @@ class _KimberliteStageState extends State<KimberliteStage>
     return Container(
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.5),
+        color: glassFill,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+        border: Border.all(color: glassBorder),
       ),
-      child: Row(
-        children: List.generate(labels.length, (i) {
-          final active = tab == i;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => tab = i),
-              child: AnimatedContainer(
-                duration: d(const Duration(milliseconds: 220)),
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(vertical: 9),
+      child: Stack(
+        children: [
+          // pastilla que se desliza hasta la pestaña activa
+          AnimatedAlign(
+            alignment: Alignment(-1 + (2 / 3) * tab, 0),
+            duration: d(const Duration(milliseconds: 260)),
+            curve: Curves.easeOutCubic,
+            child: FractionallySizedBox(
+              widthFactor: 1 / labels.length,
+              child: Container(
+                height: 36,
                 decoration: BoxDecoration(
-                  color: active ? Colors.white.withValues(alpha: 0.85) : Colors.transparent,
+                  color: pillFill,
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: Text(labels[i],
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: active ? const Color(0xFF201D18) : const Color(0xFF201D18).withValues(alpha: 0.6),
-                        fontSize: 13.5,
-                        fontWeight: active ? FontWeight.w600 : FontWeight.w400)),
               ),
             ),
-          );
-        }),
+          ),
+          Row(
+            children: List.generate(labels.length, (i) {
+              final active = tab == i;
+              return Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    setState(() => tab = i);
+                    if (calm) {
+                      paneCtrl.value = 1;
+                    } else {
+                      paneCtrl.forward(from: 0);
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    child: Text(labels[i],
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: active
+                                ? ink
+                                : ink.withValues(alpha: 0.6),
+                            fontSize: 13.5,
+                            fontWeight: active ? FontWeight.w600 : FontWeight.w400)),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _stagger(Widget child, int i) {
+    final start = (0.09 * i).clamp(0.0, 0.55);
+    return AnimatedBuilder(
+      animation: paneCtrl,
+      builder: (context, _) {
+        final t = Interval(start, 1.0, curve: Curves.easeOutCubic).transform(paneCtrl.value);
+        return Opacity(
+            opacity: t, child: Transform.translate(offset: Offset(0, (1 - t) * 16), child: child));
+      },
     );
   }
 
@@ -333,74 +409,101 @@ class _KimberliteStageState extends State<KimberliteStage>
       child: Row(children: [
         Text(label,
             style: TextStyle(
-                color: const Color(0xFF201D18).withValues(alpha: 0.72),
+                color: ink.withValues(alpha: 0.72),
                 fontSize: 14,
                 fontWeight: strong ? FontWeight.w600 : FontWeight.w400)),
         const Spacer(),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(value, style: const TextStyle(color: Color(0xFF201D18), fontSize: 14, fontWeight: FontWeight.w600)),
+          Text(value, style: TextStyle(color: ink, fontSize: 14, fontWeight: FontWeight.w600)),
           if (meta != null)
-            Text(meta, style: TextStyle(color: const Color(0xFF201D18).withValues(alpha: 0.5), fontSize: 12)),
+            Text(meta, style: TextStyle(color: ink.withValues(alpha: 0.5), fontSize: 12)),
         ]),
         if (trailing != null) ...[const SizedBox(width: 8), trailing],
       ]),
     );
-    return onTap == null ? child : InkWell(borderRadius: BorderRadius.circular(10), onTap: onTap, child: child);
+    return onTap == null
+        ? child
+        : InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: onTap,
+            hoverColor: hoverFill,
+            splashColor: teal.withValues(alpha: 0.12),
+            child: child);
   }
 
   Widget _playPane() {
     final inst = instances[selectedInstance];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _row('Instancia', inst.$1, meta: inst.$2, onTap: () => setState(() => tab = 1)),
-      Divider(color: const Color(0xFF201D18).withValues(alpha: 0.1), height: 1),
-      _row('Cuenta', 'Adrián', meta: 'Microsoft · también vale un perfil local'),
+      _stagger(_row('Instancia', inst.$1, meta: inst.$2, onTap: () => setState(() => tab = 1)), 0),
+      _stagger(Divider(color: ink.withValues(alpha: 0.1), height: 1), 1),
+      _stagger(_row('Cuenta', 'Adrián', meta: 'Microsoft · también vale un perfil local'), 2),
       const SizedBox(height: 18),
-      FilledButton(
+      _stagger(
+          GestureDetector(
+            onTapDown: (_) => setState(() => pressing = true),
+            onTapUp: (_) => setState(() => pressing = false),
+            onTapCancel: () => setState(() => pressing = false),
+            child: AnimatedScale(
+              scale: pressing ? 0.96 : 1,
+              duration: d(const Duration(milliseconds: 110)),
+              curve: Curves.easeOutCubic,
+              child: FilledButton(
         style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFF0E6071),
+          backgroundColor: teal,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
-        onPressed: play,
-        child: Text(launching ? 'Lanzando…' : 'Jugar', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-      ),
+              onPressed: play,
+              child: Text(launching ? 'Lanzando…' : 'Jugar',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+          )),
+          3),
       const SizedBox(height: 12),
-      AnimatedSwitcher(
-        duration: d(const Duration(milliseconds: 220)),
-        child: Text(playStatus,
-            key: ValueKey(playStatus),
-            style: TextStyle(color: const Color(0xFF201D18).withValues(alpha: 0.55), fontSize: 12.5)),
-      ),
+      _stagger(
+          AnimatedSwitcher(
+            duration: d(const Duration(milliseconds: 220)),
+            child: Text(playStatus,
+                key: ValueKey(playStatus),
+                style: TextStyle(color: ink.withValues(alpha: 0.55), fontSize: 12.5)),
+          ),
+          4),
     ]);
   }
 
   Widget _instancesPane() {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       for (var i = 0; i < instances.length; i++)
-        _row(instances[i].$1, '', meta: instances[i].$2, strong: true,
-            trailing: Icon(selectedInstance == i ? Icons.check_circle : Icons.circle_outlined,
-                size: 18, color: selectedInstance == i ? const Color(0xFF0E6071) : const Color(0xFF201D18).withValues(alpha: 0.25)),
-            onTap: () => setState(() {
-                  selectedInstance = i;
-                  showNewHint = false;
-                })),
+        _stagger(
+            _row(instances[i].$1, '', meta: instances[i].$2, strong: true,
+                trailing: Icon(selectedInstance == i ? Icons.check_circle : Icons.circle_outlined,
+                    size: 18,
+                    color: selectedInstance == i
+                        ? tealSoft
+                        : ink.withValues(alpha: 0.25)),
+                onTap: () => setState(() {
+                      selectedInstance = i;
+                      showNewHint = false;
+                    })),
+            i),
       const SizedBox(height: 14),
-      OutlinedButton(
+      _stagger(OutlinedButton(
         style: OutlinedButton.styleFrom(
-          foregroundColor: const Color(0xFF201D18),
-          side: BorderSide(color: const Color(0xFF201D18).withValues(alpha: 0.25)),
+          foregroundColor: ink,
+          side: BorderSide(color: ink.withValues(alpha: 0.25)),
           padding: const EdgeInsets.symmetric(vertical: 13),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
-        onPressed: () => setState(() => showNewHint = true),
-        child: const Text('Nueva instancia'),
-      ),
+              onPressed: () => setState(() => showNewHint = true),
+              child: const Text('Nueva instancia'),
+            ),
+            instances.length),
       if (showNewHint)
         Padding(
           padding: const EdgeInsets.only(top: 10),
           child: Text('En el launcher real, este botón abre el asistente para crear la instancia.',
-              style: TextStyle(color: const Color(0xFF201D18).withValues(alpha: 0.55), fontSize: 12.5)),
+              style: TextStyle(color: ink.withValues(alpha: 0.55), fontSize: 12.5)),
         ),
     ]);
   }
@@ -410,37 +513,48 @@ class _KimberliteStageState extends State<KimberliteStage>
       padding: const EdgeInsets.symmetric(vertical: 34),
       child: Column(children: [
         Text('Vacía, por ahora',
-            style: TextStyle(color: const Color(0xFF201D18).withValues(alpha: 0.85), fontSize: 15, fontWeight: FontWeight.w600)),
+            style: TextStyle(color: ink.withValues(alpha: 0.85), fontSize: 15, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         Text('El catálogo de mods es la siguiente fase del launcher.\nLa pestaña ya está aquí, esperándolo.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: const Color(0xFF201D18).withValues(alpha: 0.55), fontSize: 12.5, height: 1.5)),
+            style: TextStyle(color: ink.withValues(alpha: 0.55), fontSize: 12.5, height: 1.5)),
       ]),
     );
   }
 
   Widget _settingsPane() {
     return Column(children: [
-      _row('Carpeta de instancias', '', meta: 'Separada de otros launchers', strong: true),
-      Divider(color: const Color(0xFF201D18).withValues(alpha: 0.1), height: 1),
+      _stagger(_row('Modo oscuro', '', strong: true,
+          trailing: Switch(
+            value: dark,
+            activeTrackColor: teal,
+            onChanged: (v) => setState(() => dark = v),
+          )), 0),
+      _stagger(Divider(color: ink.withValues(alpha: 0.1), height: 1), 1),
+      _stagger(_row('Carpeta de instancias', '', meta: 'Separada de otros launchers', strong: true), 2),
+      _stagger(Divider(color: ink.withValues(alpha: 0.1), height: 1), 3),
       _row('Reducir animaciones', '', strong: true,
           trailing: Switch(
             value: calm,
-            activeTrackColor: const Color(0xFF0E6071),
+            activeTrackColor: teal,
             onChanged: (v) => setState(() {
               calm = v;
               if (v) {
                 drift.stop();
+                paneCtrl.value = 1;
               } else {
                 drift.repeat(reverse: true);
+                paneCtrl.forward(from: 0);
               }
             }),
           )),
-      Divider(color: const Color(0xFF201D18).withValues(alpha: 0.1), height: 1),
-      _row('Registros', '', meta: 'Los logs, siempre a mano', strong: true),
+      Divider(color: ink.withValues(alpha: 0.1), height: 1),
+      _stagger(_row('Registros', '', meta: 'Los logs, siempre a mano', strong: true), 5),
       const SizedBox(height: 8),
-      Text('El interruptor funciona: actívalo y la ventana se calma.',
-          style: TextStyle(color: const Color(0xFF201D18).withValues(alpha: 0.55), fontSize: 12.5)),
+      _stagger(
+          Text('Los dos interruptores funcionan: oscuro por defecto, y la ventana se calma si lo pides.',
+              style: TextStyle(color: ink.withValues(alpha: 0.55), fontSize: 12.5)),
+          6),
     ]);
   }
 
@@ -451,12 +565,12 @@ class _KimberliteStageState extends State<KimberliteStage>
       builder: (context, v, _) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.55),
+          color: glassFill,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+          border: Border.all(color: glassBorder),
         ),
         child: Text('${v.toStringAsFixed(0)} fps · prueba',
-            style: TextStyle(color: const Color(0xFF201D18).withValues(alpha: 0.6), fontSize: 11)),
+            style: TextStyle(color: ink.withValues(alpha: 0.6), fontSize: 11)),
       ),
     );
   }
@@ -473,12 +587,12 @@ class _KimberliteStageState extends State<KimberliteStage>
         return Opacity(
           opacity: fadeOut,
           child: Container(
-            color: const Color(0xFFECE9E1),
+            color: bgColors[0],
             child: Center(
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Transform.translate(
                   offset: Offset(-spread * 116, 0),
-                  child: const Text('<', style: TextStyle(color: Color(0xFF0E6071), fontSize: 44, fontWeight: FontWeight.w700)),
+                  child: Text('<', style: TextStyle(color: tealSoft, fontSize: 44, fontWeight: FontWeight.w700)),
                 ),
                 ClipRect(
                   child: SizedBox(
@@ -496,7 +610,7 @@ class _KimberliteStageState extends State<KimberliteStage>
                 ),
                 Transform.translate(
                   offset: Offset(spread * 116, 0),
-                  child: const Text('>', style: TextStyle(color: Color(0xFF0E6071), fontSize: 44, fontWeight: FontWeight.w700)),
+                  child: Text('>', style: TextStyle(color: tealSoft, fontSize: 44, fontWeight: FontWeight.w700)),
                 ),
               ]),
             ),
@@ -515,7 +629,7 @@ class _KimberliteStageState extends State<KimberliteStage>
       child: Transform.translate(
         offset: Offset(0, 14 * (1 - e)),
         child: Text(ch,
-            style: const TextStyle(color: Color(0xFF201D18), fontSize: 34, fontWeight: FontWeight.w700, letterSpacing: 2)),
+            style: TextStyle(color: ink, fontSize: 34, fontWeight: FontWeight.w700, letterSpacing: 2)),
       ),
     );
   }
