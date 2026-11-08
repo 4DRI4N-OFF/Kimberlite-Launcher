@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'spring.dart';
 
 void main() => runApp(const KimberliteApp());
 
@@ -41,18 +42,42 @@ class _KimberliteStageState extends State<KimberliteStage>
   bool calm = false;
   // modo oscuro por defecto (pedido por Adrián): cantera de noche, tinta de piedra clara
   bool dark = true;
-  Color get ink => dark ? const Color(0xFFEDE9E0) : const Color(0xFF201D18);
+  // mezcla animada claro/oscuro: 0 = claro, 1 = oscuro
+  final SpringHub hub = SpringHub();
+  late final AnimationController themeCtrl =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 520), value: 1)
+        ..addListener(() => setState(() {}));
+  double get tt => Curves.easeInOut.transform(themeCtrl.value);
+  Color mix(Color light, Color darkC) => Color.lerp(light, darkC, tt)!;
+  Color get ink => mix(const Color(0xFF201D18), const Color(0xFFEDE9E0));
   Color get teal => const Color(0xFF0E6071);
-  Color get tealSoft => dark ? const Color(0xFF4FA8BD) : const Color(0xFF0E6071);
-  Color get glassFill => dark ? Colors.white.withValues(alpha: 0.07) : Colors.white.withValues(alpha: 0.55);
-  Color get glassBorder => dark ? Colors.white.withValues(alpha: 0.16) : Colors.white.withValues(alpha: 0.7);
-  Color get pillFill => dark ? Colors.white.withValues(alpha: 0.16) : Colors.white.withValues(alpha: 0.85);
-  Color get hoverFill => dark ? Colors.white.withValues(alpha: 0.10) : Colors.white.withValues(alpha: 0.5);
-  List<Color> get bgColors =>
-      dark ? const [Color(0xFF171410), Color(0xFF201C16)] : const [Color(0xFFEDE9E0), Color(0xFFE4DFD3)];
-  List<Color> get blobColors => dark
-      ? const [Color(0x30C7B49A), Color(0x2A5F97A0), Color(0x24A89A80)]
-      : const [Color(0x55D8CDB8), Color(0x4DC7DFE2), Color(0x40E3DCC9)];
+  Color get tealSoft => mix(const Color(0xFF0E6071), const Color(0xFF4FA8BD));
+  Color get glassFill => mix(Colors.white.withValues(alpha: 0.55), Colors.white.withValues(alpha: 0.07));
+  Color get glassBorder => mix(Colors.white.withValues(alpha: 0.7), Colors.white.withValues(alpha: 0.16));
+  Color get pillFill => mix(Colors.white.withValues(alpha: 0.85), Colors.white.withValues(alpha: 0.16));
+  Color get hoverFill => mix(Colors.white.withValues(alpha: 0.5), Colors.white.withValues(alpha: 0.10));
+  List<Color> get bgColors => [
+        mix(const Color(0xFFEDE9E0), const Color(0xFF171410)),
+        mix(const Color(0xFFE4DFD3), const Color(0xFF201C16)),
+      ];
+  List<Color> get blobColors => [
+        mix(const Color(0x55D8CDB8), const Color(0x30C7B49A)),
+        mix(const Color(0x4DC7DFE2), const Color(0x2A5F97A0)),
+        mix(const Color(0x40E3DCC9), const Color(0x24A89A80)),
+      ];
+
+  // cambio de modo: la interfaz recibe un golpe y rebota con squash & stretch
+  void setDark(bool v) {
+    if (v == dark) return;
+    setState(() => dark = v);
+    if (calm) {
+      themeCtrl.value = v ? 1 : 0;
+    } else {
+      v ? themeCtrl.forward() : themeCtrl.reverse();
+      hub.kick();
+    }
+  }
+
   // interfaz viva: parpadeo del puntero y revelado en cascada de cada panel
   final ValueNotifier<Offset> pointer = ValueNotifier(Offset.zero);
   late final AnimationController paneCtrl =
@@ -112,6 +137,8 @@ class _KimberliteStageState extends State<KimberliteStage>
     intro.dispose();
     drift.dispose();
     paneCtrl.dispose();
+    themeCtrl.dispose();
+    hub.dispose();
     pointer.dispose();
     fps.dispose();
     _cancelTimers();
@@ -170,7 +197,10 @@ class _KimberliteStageState extends State<KimberliteStage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    hub.calm = calm;
+    return SpringScope(
+      hub: hub,
+      child: Scaffold(
       body: MouseRegion(
         onHover: (e) {
           if (calm) return;
@@ -213,8 +243,22 @@ class _KimberliteStageState extends State<KimberliteStage>
             ),
           ),
           Positioned(top: 14, right: 16, child: _fpsPill()),
+          Positioned(
+            top: 14,
+            left: 16,
+            child: ThemeToggle(
+              dark: dark,
+              calm: calm,
+              onChanged: setDark,
+              trackColor: glassFill,
+              borderColor: glassBorder,
+              knobColor: mix(Colors.white, const Color(0xFF3A342B)),
+              iconColor: const Color(0xFFEDE9E0),
+            ),
+          ),
           if (!introDone) _introOverlay(),
         ],
+      ),
       ),
       ),
     );
@@ -273,12 +317,15 @@ class _KimberliteStageState extends State<KimberliteStage>
     if (!tappable) return w;
     return Tooltip(
       message: 'Toca para repetir la intro',
-      child: InkWell(borderRadius: BorderRadius.circular(8), onTap: replayIntro, child: Padding(padding: const EdgeInsets.all(4), child: w)),
+      child: SpringBox(press: 0.12, child: InkWell(borderRadius: BorderRadius.circular(8), onTap: replayIntro, child: Padding(padding: const EdgeInsets.all(4), child: w))),
     );
   }
 
   Widget _window() {
-    return AnimatedScale(
+    return SpringBox(
+      impactOrder: 0,
+      impactStrength: 0.7,
+      child: AnimatedScale(
       scale: introDone ? 1 : 0.96,
       duration: d(const Duration(milliseconds: 500)),
       curve: Curves.easeOutCubic,
@@ -297,7 +344,7 @@ class _KimberliteStageState extends State<KimberliteStage>
                     style: TextStyle(color: ink.withValues(alpha: 0.55), fontSize: 13)),
               ]),
               const SizedBox(height: 16),
-              _tabBar(),
+              SpringBox(impactOrder: 1, impactStrength: 0.9, child: _tabBar()),
               const SizedBox(height: 18),
               AnimatedSize(
                 duration: d(const Duration(milliseconds: 300)),
@@ -313,7 +360,7 @@ class _KimberliteStageState extends State<KimberliteStage>
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _tabBar() {
@@ -328,21 +375,14 @@ class _KimberliteStageState extends State<KimberliteStage>
       ),
       child: Stack(
         children: [
-          // pastilla que se desliza hasta la pestaña activa
-          AnimatedAlign(
-            alignment: Alignment(-1 + (2 / 3) * tab, 0),
-            duration: d(const Duration(milliseconds: 260)),
-            curve: Curves.easeOutCubic,
-            child: FractionallySizedBox(
-              widthFactor: 1 / labels.length,
-              child: Container(
-                height: 36,
-                decoration: BoxDecoration(
-                  color: pillFill,
-                  borderRadius: BorderRadius.circular(13),
-                ),
-              ),
-            ),
+          // pastilla con muelle: se desliza, se pasa y se estira como gelatina
+          SpringPill(
+            index: tab,
+            count: labels.length,
+            color: pillFill,
+            height: 36,
+            radius: 13,
+            calm: calm,
           ),
           Row(
             children: List.generate(labels.length, (i) {
@@ -358,7 +398,9 @@ class _KimberliteStageState extends State<KimberliteStage>
                       paneCtrl.forward(from: 0);
                     }
                   },
-                  child: Padding(
+                  child: SpringBox(
+                    press: 0.14,
+                    child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 9),
                     child: Text(labels[i],
                         textAlign: TextAlign.center,
@@ -368,7 +410,7 @@ class _KimberliteStageState extends State<KimberliteStage>
                                 : ink.withValues(alpha: 0.6),
                             fontSize: 13.5,
                             fontWeight: active ? FontWeight.w600 : FontWeight.w400)),
-                  ),
+                  )),
                 ),
               );
             }),
@@ -378,16 +420,20 @@ class _KimberliteStageState extends State<KimberliteStage>
     );
   }
 
-  Widget _stagger(Widget child, int i) {
+  Widget _stagger(Widget child, int i, {bool wobble = true}) {
     final start = (0.09 * i).clamp(0.0, 0.55);
-    return AnimatedBuilder(
+    return SpringBox(
+      impactOrder: i + 2,
+      impactStrength: 1.0,
+      wobble: wobble,
+      child: AnimatedBuilder(
       animation: paneCtrl,
       builder: (context, _) {
         final t = Interval(start, 1.0, curve: Curves.easeOutCubic).transform(paneCtrl.value);
         return Opacity(
             opacity: t, child: Transform.translate(offset: Offset(0, (1 - t) * 16), child: child));
       },
-    );
+    ));
   }
 
   Widget _pane() {
@@ -423,42 +469,38 @@ class _KimberliteStageState extends State<KimberliteStage>
     );
     return onTap == null
         ? child
-        : InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: onTap,
-            hoverColor: hoverFill,
-            splashColor: teal.withValues(alpha: 0.12),
-            child: child);
+        : SpringBox(
+            press: 0.045,
+            child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: onTap,
+                hoverColor: hoverFill,
+                splashColor: teal.withValues(alpha: 0.12),
+                child: child));
   }
 
   Widget _playPane() {
     final inst = instances[selectedInstance];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       _stagger(_row('Instancia', inst.$1, meta: inst.$2, onTap: () => setState(() => tab = 1)), 0),
-      _stagger(Divider(color: ink.withValues(alpha: 0.1), height: 1), 1),
+      _stagger(Divider(color: ink.withValues(alpha: 0.1), height: 1), 1, wobble: false),
       _stagger(_row('Cuenta', 'Adrián', meta: 'Microsoft · también vale un perfil local'), 2),
       const SizedBox(height: 18),
       _stagger(
-          GestureDetector(
-            onTapDown: (_) => setState(() => pressing = true),
-            onTapUp: (_) => setState(() => pressing = false),
-            onTapCancel: () => setState(() => pressing = false),
-            child: AnimatedScale(
-              scale: pressing ? 0.96 : 1,
-              duration: d(const Duration(milliseconds: 110)),
-              curve: Curves.easeOutCubic,
-              child: FilledButton(
-        style: FilledButton.styleFrom(
-          backgroundColor: teal,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
+          SpringBox(
+            press: 0.09,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: teal,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
               onPressed: play,
               child: Text(launching ? 'Lanzando…' : 'Jugar',
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             ),
-          )),
+          ),
           3),
       const SizedBox(height: 12),
       _stagger(
@@ -488,7 +530,7 @@ class _KimberliteStageState extends State<KimberliteStage>
                     })),
             i),
       const SizedBox(height: 14),
-      _stagger(OutlinedButton(
+      _stagger(SpringBox(press: 0.07, child: OutlinedButton(
         style: OutlinedButton.styleFrom(
           foregroundColor: ink,
           side: BorderSide(color: ink.withValues(alpha: 0.25)),
@@ -497,7 +539,7 @@ class _KimberliteStageState extends State<KimberliteStage>
         ),
               onPressed: () => setState(() => showNewHint = true),
               child: const Text('Nueva instancia'),
-            ),
+            )),
             instances.length),
       if (showNewHint)
         Padding(
@@ -525,16 +567,21 @@ class _KimberliteStageState extends State<KimberliteStage>
   Widget _settingsPane() {
     return Column(children: [
       _stagger(_row('Modo oscuro', '', strong: true,
-          trailing: Switch(
-            value: dark,
-            activeTrackColor: teal,
-            onChanged: (v) => setState(() => dark = v),
+          trailing: SpringBox(
+            press: 0.18,
+            child: Switch(
+              value: dark,
+              activeTrackColor: teal,
+              onChanged: setDark,
+            ),
           )), 0),
-      _stagger(Divider(color: ink.withValues(alpha: 0.1), height: 1), 1),
+      _stagger(Divider(color: ink.withValues(alpha: 0.1), height: 1), 1, wobble: false),
       _stagger(_row('Carpeta de instancias', '', meta: 'Separada de otros launchers', strong: true), 2),
-      _stagger(Divider(color: ink.withValues(alpha: 0.1), height: 1), 3),
+      _stagger(Divider(color: ink.withValues(alpha: 0.1), height: 1), 3, wobble: false),
       _row('Reducir animaciones', '', strong: true,
-          trailing: Switch(
+          trailing: SpringBox(
+            press: 0.18,
+            child: Switch(
             value: calm,
             activeTrackColor: teal,
             onChanged: (v) => setState(() {
@@ -547,7 +594,7 @@ class _KimberliteStageState extends State<KimberliteStage>
                 paneCtrl.forward(from: 0);
               }
             }),
-          )),
+          ))),
       Divider(color: ink.withValues(alpha: 0.1), height: 1),
       _stagger(_row('Registros', '', meta: 'Los logs, siempre a mano', strong: true), 5),
       const SizedBox(height: 8),
