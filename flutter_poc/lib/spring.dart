@@ -174,7 +174,7 @@ class _SpringBoxState extends State<SpringBox> with SingleTickerProviderStateMix
     final dx = d.x.clamp(-0.4, 0.4);
     final m = Matrix4.identity()
       ..rotateZ(r.x)
-      ..scale(1 + 0.7 * dx, 1 - dx, 1.0);
+      ..scaleByDouble(1 + 0.7 * dx, 1 - dx, 1.0, 1.0);
     Widget child = Transform(transform: m, alignment: widget.alignment, child: widget.child);
     if (widget.press > 0) {
       child = Listener(
